@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎀</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .branch-path {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: growBranch 3s ease-out forwards;
+        }
+        @keyframes growBranch { to { stroke-dashoffset: 0; } }
+
+        /* Animación de escala sin usar transform: translate */
+        .flower-layer {
+            transform-origin: center;
+            animation: bloom 0.8s ease-out forwards;
+            transform: scale(0);
+        }
+        @keyframes bloom { to { transform: scale(1); } }
+
+        .box-fall {
+            animation: fallBox 1.2s cubic-bezier(0.4, 0, 1, 1) forwards;
+        }
+        @keyframes fallBox { to { transform: translateY(800px) rotate(20deg); opacity: 0; } }
+
+        .fade-out { opacity: 0; transition: opacity 0.8s; pointer-events: none; }
+    </style>
+</head>
+<body class="bg-stone-100 h-screen flex flex-col items-center justify-between overflow-hidden relative">
+
+    <div id="ui" class="mt-20 text-center z-50">
+        <p class="text-stone-500 font-serif italic text-2xl animate-pulse">Abre la tapa de la caja mi niña</p>
+    </div>
+
+    <div id="stage" class="relative flex-grow w-full flex items-end justify-center pb-24 z-20">
+        <div id="gift-container" class="relative w-44 h-44">
+            <div id="lid" class="absolute -top-6 -left-2 w-48 h-14 bg-rose-500 shadow-2xl z-30 cursor-grab active:cursor-grabbing rounded-sm flex justify-center touch-none" onpointerdown="startDrag(event)">
+                <div class="w-10 h-full bg-rose-600 opacity-30"></div>
+                <div class="absolute -top-4 w-10 h-10 flex justify-center">
+                    <div class="w-6 h-6 border-4 border-rose-600 rounded-full -mr-1"></div>
+                    <div class="w-6 h-6 border-4 border-rose-600 rounded-full -ml-1"></div>
+                </div>
+            </div>
+            <div id="box-body" class="w-44 h-44 bg-rose-400 shadow-2xl relative flex justify-center overflow-hidden border-b-2 border-rose-500">
+                <div class="w-10 h-full bg-rose-500 opacity-40"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="absolute bottom-0 w-full h-24 bg-stone-200 border-t border-stone-300 z-10"></div>
+
+    <svg id="garden-svg" viewBox="0 0 800 600" class="absolute inset-0 w-full h-full z-0 hidden" preserveAspectRatio="xMidYMid slice">
+        </svg>
+
+    <div id="final-msg" class="absolute inset-0 flex items-center justify-center opacity-0 z-40 pointer-events-none transition-opacity duration-1000">
+        <h2 class="text-4xl md:text-6xl text-rose-900 font-serif text-center bg-white/70 p-10 rounded-3xl backdrop-blur-md shadow-2xl">
+            Feliz cumpleaños, amor de mi vida ❤️ <br>
+            <span class="text-xl text-rose-500 mt-4 block">Y aunque ahora es un ramo echo con un codigo,
+algun dia, si te quedas a mi lado, prometo darte un campo repleto de flores. </span>
+        </h2>
+    </div>
+
+    <script>
+        let isDragging = false, startY = 0;
+        const lid = document.getElementById('lid'), boxBody = document.getElementById('box-body'), ui = document.getElementById('ui'), svg = document.getElementById('garden-svg');
+
+        function startDrag(e) {
+            isDragging = true; startY = e.clientY;
+            lid.setPointerCapture(e.pointerId);
+            document.addEventListener('pointermove', onDrag);
+            document.addEventListener('pointerup', endDrag);
+        }
+
+        function onDrag(e) {
+            if (!isDragging) return;
+            const deltaY = e.clientY - startY;
+            if (deltaY < 0) {
+                lid.style.transform = `translateY(${deltaY}px) rotate(${deltaY * 0.1}deg)`;
+                if (deltaY < -150) { endDrag(); startMagic(); }
+            }
+        }
+
+        function endDrag() {
+            isDragging = false;
+            if (!lid.classList.contains('fade-out')) lid.style.transform = 'translateY(0) rotate(0)';
+            document.removeEventListener('pointermove', onDrag);
+            document.removeEventListener('pointerup', endDrag);
+        }
+
+        function startMagic() {
+            lid.classList.add('fade-out'); ui.classList.add('opacity-0');
+            setTimeout(() => { boxBody.classList.add('box-fall'); initGarden(); }, 600);
+        }
+
+        function initGarden() {
+            svg.classList.remove('hidden');
+            const groundY = 550, numRamas = 10;
+            for (let i = 0; i < numRamas; i++) {
+                const delay = i * 0.3;
+                const startX = 100 + (i * 65) + (Math.random() * 40);
+                const endX = startX + (Math.random() * 160 - 80);
+                const endY = 100 + (Math.random() * 200);
+                const cpX = (startX + endX) / 2 + (Math.random() * 100 - 50);
+
+                const branch = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                branch.setAttribute("d", `M${startX},${groundY} Q${cpX},350 ${endX},${endY}`);
+                branch.setAttribute("fill", "none");
+                branch.setAttribute("stroke", "#3f471e");
+                branch.setAttribute("stroke-width", "3");
+                branch.classList.add("branch-path");
+                branch.style.animationDelay = `${delay}s`;
+                svg.appendChild(branch);
+
+                // CREAR FLOR: Pasamos las coordenadas exactas de la punta
+                setTimeout(() => { createFlower(endX, endY); }, (delay * 1000) + 2000);
+            }
+            setTimeout(() => { document.getElementById('final-msg').classList.remove('opacity-0'); }, 4000);
+        }
+
+        function createFlower(cx, cy) {
+            const colors = ['#fb7185', '#f472b6', '#fda4af', '#e11d48', '#f87171'];
+            const petalColor = colors[Math.floor(Math.random() * colors.length)];
+            const numPetals = 6;
+            const petalRadius = 15;
+
+            // DIBUJAMOS PÉTALOS UNO POR UNO SIN USAR GRUPOS
+            for (let i = 0; i < numPetals; i++) {
+                const angle = (i * 2 * Math.PI) / numPetals;
+                
+                // Cálculo matemático de la posición de cada pétalo respecto al centro (cx, cy)
+                const px = cx + Math.cos(angle) * 12;
+                const py = cy + Math.sin(angle) * 12;
+
+                const petal = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                petal.setAttribute("cx", px);
+                petal.setAttribute("cy", py);
+                petal.setAttribute("r", petalRadius);
+                petal.setAttribute("fill", petalColor);
+                
+                // Forzamos el origen de la animación al centro de la flor (cx, cy)
+                petal.style.transformOrigin = `${cx}px ${cy}px`;
+                petal.classList.add("flower-layer");
+                svg.appendChild(petal);
+            }
+
+            // CENTRO DE LA FLOR
+            const center = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            center.setAttribute("cx", cx);
+            center.setAttribute("cy", cy);
+            center.setAttribute("r", "8");
+            center.setAttribute("fill", "#fbbf24");
+            center.style.transformOrigin = `${cx}px ${cy}px`;
+            center.classList.add("flower-layer");
+            svg.appendChild(center);
+        }
+    </script>
+</body>
+</html>
